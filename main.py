@@ -1,18 +1,38 @@
+import torch.cuda
 from adaptive_classifier import AdaptiveClassifier
 import pandas as pd
+from tqdm import tqdm
 from sklearn.metrics import accuracy_score, classification_report
 
-train = pd.read_csv("./data/training.csv")
-test = pd.read_csv("./data/test.csv")
+train_df = pd.read_csv("./data/training.csv")
+test_df = pd.read_csv("./data/test.csv")
 
-clf = AdaptiveClassifier("distilbert-base-uncased")
+X_train = train_df["text"].tolist()
+y_train = train_df["label"].tolist()
 
-clf.add_examples(list(train["text"]), list(train["label"]))
+X_test = test_df["text"].tolist()
+y_test = test_df["label"].tolist()
 
-prediction = clf.predict(test["text"])
+print(f"Cuda is {'available' if torch.cuda.is_available() else 'unavailable'}")
 
-accuracy = accuracy_score(test["text"], prediction)
+clf = AdaptiveClassifier(
+    "bert-base-uncased",
+    "cuda"
+)
+
+print("Read data, starting training")
+
+for i in tqdm(range(len(X_train))):
+    clf.add_examples(X_train[i:i+1], y_train[i:i+1])
+
+clf.save("./clf")
+
+print("Training done")
+
+prediction = clf.predict(X_test)
+
+accuracy = accuracy_score(y_test, prediction)
 print(f"Accuracy: {accuracy}")
 
 # Отчет по классификации
-print("Classification Report:\n", classification_report(test["text"], test["text"]))
+print("Classification Report:\n", classification_report(prediction, y_test))
